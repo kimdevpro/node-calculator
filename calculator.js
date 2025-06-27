@@ -1,54 +1,61 @@
 const readline = require("readline-sync");
 
-function getValidOperation() {
-    const validOps = ["+", "-", "*", "/", "%"];
-    let op = readline.question("What operation would you like to perform? (+, -, *, /, %): ");
-    if (!validOps.includes(op)) {
-        console.log("That is not a valid operation.");
-        process.exit(1);
+const validOpsObj = {
+  "+": (a, b) => a + b,
+  "-": (a, b) => a - b,
+  "*": (a, b) => a * b,
+  "/": (a, b) => a / b,
+  "%": (a, b) => a % b,
+}
+const validOps = Object.keys(validOpsObj);
+
+function getValidOperation(operations) {
+  return readline.question(`\nWhat operation would you like to perform? (${operations.join(',')}): `,
+    {
+      limit: operations,
+      limitMessage: `\nThat is not a valid operation.` 
     }
-    else {
-        return op;
+  );
+}
+
+function getValidNumber(order, isDivision = false, isModulo = false) {
+  const number = readline.questionInt(`\nPlease enter the ${order} number: `,
+    {
+      limitMessage: "\nThis is not a number.",
     }
-}
-
-function getValidNumber(promptText) {
-  let input = readline.question(promptText);
-  while (isNaN(input)) {
-    console.log("This is not a number.");
-    input = readline.question(promptText);
+  );
+  if (order == "second" && number == 0 && (isDivision || isModulo)) {
+    console.log("\nCannot divide or modulo by zero.");
+    return getValidNumber(order, isDivision, isModulo);
   }
-  return parseFloat(input);
+  return number;
 }
 
-function calculate(a, b, op) {
-  switch (op) {
-    case "+": return a + b;
-    case "-": return a - b;
-    case "*": return a * b;
-    case "/": return b !== 0 ? a / b : "Cannot divide by zero";
-    case "%": return b !== 0 ? a % b : "Cannot modulo by zero";
-    default: return "Unknown operation";
-  }
+function calculate(a, b, op, list) {
+  return list[op](a, b);
 }
 
-function interactiveMode() {
-  const operator = getValidOperation();
-  const num1 = getValidNumber("Please enter the first number: ");
-  const num2 = getValidNumber("Please enter the second number: ");
-  const result = calculate(num1, num2, operator);
-  console.log(`The result is: ${result}`);
+function interactiveMode(operations) {
+  const validOps = Object.keys(operations);
+  const operator = getValidOperation(validOps);
+  const num1 = getValidNumber("first");
+  const isDivision = operator === "/";
+  const isModulo = operator === "%";
+  const num2 = getValidNumber("second", isDivision, isModulo);
+  const result = calculate(num1, num2, operator, operations);
+  console.log(`\nThe result is: ${result}`);
+
 }
 
 function argumentMode(args) {
   if (args.length !== 3) {
-    console.log("Please provide exactly 3 arguments: number1 operator number2");
+    console.log("\nPlease provide exactly 3 arguments: number1 operator number2");
     return;
   }
 
   const [n1, op, n2] = args;
-  if (!["+", "-", "*", "/", "%"].includes(op)) {
-    console.log("Invalid operator. Use one of: +, -, *, /, %");
+  if (!validOps.includes(op)) {
+    console.log(`\nInvalid operator. Use one of: ${validOps.join(',')}`);
     return;
   }
 
@@ -56,12 +63,17 @@ function argumentMode(args) {
   const b = parseFloat(n2);
 
   if (isNaN(a) || isNaN(b)) {
-    console.log("Both inputs must be valid numbers.");
+    console.log("\nBoth inputs must be valid numbers.");
     return;
   }
 
-  const result = calculate(a, b, op);
-  console.log(`The result is: ${result}`);
+   if ((op === "/" || op === "%") && b === 0) {
+    console.log("\nCannot divide or modulo by zero.");
+    return;
+  }
+
+  const result = calculate(a, b, op, validOpsObj);
+  console.log(`\nThe result is: ${result}`);
 }
 
 // Entry point
@@ -69,5 +81,5 @@ const args = process.argv.slice(2);
 if (args.length === 3) {
   argumentMode(args);
 } else {
-  interactiveMode();
+  interactiveMode(validOpsObj);
 }
